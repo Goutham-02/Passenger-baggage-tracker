@@ -33,12 +33,11 @@ const Login = ({ onLogin }) => {
     // Demo authentication
     if (credentials.email && credentials.password) {
       const userData = {
-        id: 1,
-        name: credentials.role === "admin" ? "Admin User" : "John Passenger",
+        name: credentials.name,
         email: credentials.email,
         role: credentials.role,
       }
-      onLogin(userData)
+      const api = fetch("localhost:3000/login", userData)
     } else {
       setError("Please enter email and password")
     }
@@ -113,7 +112,7 @@ const Login = ({ onLogin }) => {
             </Select>
           </FormControl>
 
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.5 }}>
+          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.5 }} onClick={handleSubmit}>
             Sign In
           </Button>
         </Box>
