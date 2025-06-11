@@ -1,5 +1,21 @@
 import { User } from "../models/user.model.js";
 
+const generateAccessAndRefreshToken = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
+
+        user.refreshToken = refreshToken
+        await user.save({ validateBeforeSave: false })
+
+        return { accessToken, refreshToken }
+
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while generating refresh and access token")
+    }
+}
+
 const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -49,25 +65,57 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid credentials" });
         }
 
-        const loggedInUser = await User.findById(user._id).select("-password");
-
         const options = {
             httpOnly: true,
             secure: true,
         };
 
-        return res.status(200).json({
-            success: true,
-            message: "User logged in successfully",
-            user: loggedInUser,
-        });
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
+
+        const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json({
+                success: true,
+                message: "User logged in successfully",
+                user: loggedInUser,
+            });
 
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message || "Internal Server Error",
-        });
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: error.message || "Internal Server Error",
+            });
     }
 };
 
-export { registerUser, loginUser }
+const logoutUser = async (req, res) => {
+    await User.findByIdAndUpdate(req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json({ message: "User Loggedout successfully" })
+}
+
+export { registerUser, loginUser, logoutUser }
