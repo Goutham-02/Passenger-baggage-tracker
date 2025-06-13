@@ -18,9 +18,9 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, role } = req.body;
 
-        if ([name, email, password].some((field) => !field || field.trim() === "")) {
+        if ([name, email, password, role].some((field) => !field || field.trim() === "")) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
 
@@ -29,7 +29,7 @@ const registerUser = async (req, res) => {
             return res.status(409).json({ success: false, message: "User already exists" });
         }
 
-        const user = await User.create({ name, email, password });
+        const user = await User.create({ name, email, password, role });
 
         const createdUser = await User.findById(user._id).select("-password");
         if (!createdUser) {
@@ -49,15 +49,16 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ success: false, message: "Email and Password are required" });
+        if (!email || !password || !role) {
+            return res.status(400).json({ success: false, message: "Email, Password, and Role are required" });
         }
 
-        const user = await User.findOne({ email });
+        // Find user with matching email AND role
+        const user = await User.findOne({ email, role });
         if (!user) {
-            return res.status(404).json({ success: false, message: "User does not exist" });
+            return res.status(404).json({ success: false, message: "User with given email and role does not exist" });
         }
 
         const isPasswordCorrect = await user.isPasswordCorrect(password);
@@ -70,27 +71,27 @@ const loginUser = async (req, res) => {
             secure: true,
         };
 
-        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
-        const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+        const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
         return res
             .status(200)
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", refreshToken, options)
+            .cookie("role", role)
             .json({
+                status: 200,
                 success: true,
                 message: "User logged in successfully",
                 user: loggedInUser,
             });
 
     } catch (error) {
-        return res
-            .status(500)
-            .json({
-                success: false,
-                message: error.message || "Internal Server Error",
-            });
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal Server Error",
+        });
     }
 };
 
