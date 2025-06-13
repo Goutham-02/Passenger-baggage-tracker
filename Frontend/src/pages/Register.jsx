@@ -7,16 +7,21 @@ import {
     Typography,
     Box,
     Alert,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from "@mui/material"
 import { FlightTakeoff } from "@mui/icons-material"
 import { Link, useNavigate } from "react-router-dom"
 
-const Register = ({ onLogin }) => {
+const Register = () => {
     const [credentials, setCredentials] = useState({
         name: "",
         email: "",
         password: "",
         cnfPassword: "",
+        role: ""
     })
     const [error, setError] = useState("")
     const navigate = useNavigate()
@@ -29,13 +34,13 @@ const Register = ({ onLogin }) => {
         setError("")
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
 
-        const { name, email, password, cnfPassword } = credentials
+        const { name, email, password, cnfPassword, role } = credentials
 
         // Basic validation
-        if (!name || !email || !password || !cnfPassword) {
+        if (!name || !email || !password || !cnfPassword || !role) {
             return setError("All fields are required.")
         }
 
@@ -43,12 +48,30 @@ const Register = ({ onLogin }) => {
             return setError("Passwords do not match.")
         }
 
-        // Simulate registration logic
-        const userData = { name, email }
+        try {
+            const response = await fetch('http://localhost:8000/api/v1/users/register-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    role
+                })
+            });
 
-        // Optionally auto-login or redirect to login page
-        // onLogin(userData) // <-- if you want to auto-login
-        navigate("/login", { replace: true })
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Registration failed');
+            }
+
+            navigate("/login", { replace: true });
+        } catch (err) {
+            setError(err.message || 'Registration failed');
+        }
     }
 
     return (
@@ -65,12 +88,6 @@ const Register = ({ onLogin }) => {
                 </Box>
 
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                            {error}
-                        </Alert>
-                    )}
-
                     <TextField
                         margin="normal"
                         required
@@ -120,6 +137,21 @@ const Register = ({ onLogin }) => {
                         value={credentials.cnfPassword}
                         onChange={handleChange}
                     />
+
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel id="role-label">Role</InputLabel>
+                        <Select
+                            labelId="role-label"
+                            id="role"
+                            name="role"
+                            value={credentials.role}
+                            label="Role"
+                            onChange={handleChange}
+                        >
+                            <MenuItem value="passenger">Passenger</MenuItem>
+                            <MenuItem value="admin">Admin</MenuItem>
+                        </Select>
+                    </FormControl>
 
                     <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.5 }}>
                         Register

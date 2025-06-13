@@ -10,11 +10,6 @@ import Register from "./pages/Register";
 
 function App() {
   const [user, setUser] = useState(null);
-  const location = useLocation();
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-  };
 
   const handleLogout = () => {
     setUser(null);
@@ -49,7 +44,7 @@ function App() {
         <Routes>
           {!user ? (
             <>
-              <Route path="/login" element={<Login onLogin={handleLogin} />} />
+              <Route path="/login" element={<Login setUser={setUser} />} />
               <Route path="/register" element={<Register />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </>

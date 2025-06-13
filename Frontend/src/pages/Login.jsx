@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import {
   Container,
@@ -13,13 +11,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Card,
-  CardContent,
 } from "@mui/material"
+import { useNavigate } from "react-router-dom";
 import { FlightTakeoff } from "@mui/icons-material"
 import { Link } from "react-router-dom"
 
-const Login = ({ onLogin }) => {
+const Login = ({ setUser }) => {
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
@@ -27,19 +25,38 @@ const Login = ({ onLogin }) => {
   })
   const [error, setError] = useState("")
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    // Demo authentication
-    if (credentials.email && credentials.password) {
+    if (credentials.email && credentials.password && credentials.role) {
       const userData = {
-        name: credentials.name,
         email: credentials.email,
+        password: credentials.password,
         role: credentials.role,
+      };
+
+      const response = await fetch(`http://localhost:8000/api/v1/users/login-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(userData)
+      });
+
+      const json = await response.json();
+      console.log(json);
+
+      if (json.success) {
+        setUser(json.user);
+        navigate("/dashboard");
+        navigate("/dashboard");
+      } else {
+        setError(json.message || "Login failed");
       }
-      const api = fetch("localhost:3000/login", userData)
+
     } else {
-      setError("Please enter email and password")
+      setError("Please enter email, password and role");
     }
   }
 

@@ -17,6 +17,7 @@
     "@mui/x-data-grid": "^8.5.0",
     "@mui/x-date-pickers": "^8.5.0",
     "@tailwindcss/vite": "^4.1.8",
+    "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
