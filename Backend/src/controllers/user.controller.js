@@ -1,4 +1,6 @@
 import { User } from "../models/user.model.js";
+import { Plane } from "../models/plane.model.js";
+import { Baggage } from "../models/baggage.model.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -14,7 +16,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     } catch (error) {
         throw new ApiError(500, "Something went wrong while generating refresh and access token")
     }
-}
+};
 
 const registerUser = async (req, res) => {
     try {
@@ -117,6 +119,189 @@ const logoutUser = async (req, res) => {
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
         .json({ message: "User Loggedout successfully" })
+};
+
+const addPlane = async (req, res) => {
+    try {
+        const { name, from, to, departureTime, arrivalTime } = req.body;
+
+        if ([name, from, to, departureTime, arrivalTime].some((field) => !field || field.trim() === "")) {
+            return res.status(400).json({ success: false, message: "All fields are required" });
+        }
+
+        const existingPlane = await Plane.findOne({ name });
+        if (existingPlane) {
+            return res.status(409).json({ success: false, message: "Plane with this name already exists" });
+        }
+
+        const plane = await Plane.create({ name, from, to, departureTime, arrivalTime });
+
+        return res.status(201).json({
+            success: true,
+            message: "Plane added successfully",
+            plane
+        });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || "Internal server error" });
+    }
+};
+
+const addBaggage = async (req, res) => {
+    try {
+        const { passengerId, flightId, weight, status } = req.body;
+
+        if ([passengerId, flightId, status].some((field) => !field || field.trim() === "") || !weight) {
+            return res.status(400).json({ success: false, message: "All fields are required" });
+        }
+
+        const flight = await Plane.findById(flightId);
+        if (!flight) {
+            return res.status(404).json({ success: false, message: "Flight not found" });
+        }
+
+        const passenger = await User.findById(passengerId);
+        if (!passenger) {
+            return res.status(404).json({ success: false, message: "Passenger not found" });
+        }
+
+        const existingBaggage = await Baggage.findOne({ passengerId, flightId });
+        if (existingBaggage) {
+            return res.status(409).json({
+                success: false,
+                message: "Baggage for this passenger and flight already exists"
+            });
+        }
+
+        const flightCode = (flight.name || "").substring(0, 3).toUpperCase();
+        const userCode = (passenger.name || "").substring(0, 3).toUpperCase();
+
+        let tagNumber;
+        let isUnique = false;
+
+        while (!isUnique) {
+            const randomDigits = Math.floor(1000 + Math.random() * 9000);
+            tagNumber = `${flightCode}${userCode}${randomDigits}`;
+
+            const existingTag = await Baggage.findOne({ tagNumber });
+            if (!existingTag) isUnique = true;
+        }
+
+        const baggage = await Baggage.create({
+            passengerId,
+            flightId,
+            weight,
+            status,
+            tagNumber
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Baggage added successfully",
+            baggage
+        });
+
+    } catch (error) {
+        console.error("Error adding baggage:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
+};
+
+const updateBaggageStatus = async (req, res) => {
+    try {
+        const { baggageId, status } = req.body;
+
+        if (!baggageId || !status) {
+            return res.status(400).json({ success: false, message: "Baggage ID and status are required" });
+        }
+
+        const baggage = await Baggage.findById(baggageId);
+        if (!baggage) {
+            return res.status(404).json({ success: false, message: "Baggage not found" });
+        }
+
+        baggage.status = status;
+        await baggage.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Baggage status updated successfully",
+            baggage
+        });
+
+    } catch (error) {
+        console.error("Error updating baggage status:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
+};
+
+const searchBaggage = async (req, res) => {
+    try {
+        const { tagNumber } = req.body;
+        if (!tagNumber) {
+            return res.status(400).json({ success: false, message: "Tag number is required" });
+        }
+
+        const baggage = await Baggage.findOne({ tagNumber })
+            .populate('passengerId', 'name')
+            .populate('flightId', 'name from to departureTime arrivalTime');
+
+        if (!baggage) {
+            return res.status(404).json({ success: false, message: "Baggage not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            baggage
+        });
+
+    } catch (error) {
+        console.error("Error searching baggage:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
+};
+
+const getAllBaggages = async (req, res) => {
+    try {
+        const { passengerId } = req.params;
+        if (!passengerId) {
+            return res.status(400).json({ success: false, message: "Passenger ID is required" });
+        }
+        const baggages = await Baggage.find({ passengerId })
+            .populate('passengerId', 'name')
+            .populate('flightId', 'name from to departureTime arrivalTime');
+
+        return res.status(200).json({
+            success: true,
+            baggages
+        });
+
+    } catch (error) {
+        console.error("Error fetching baggages:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
 }
 
-export { registerUser, loginUser, logoutUser }
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    addPlane,
+    generateAccessAndRefreshToken,
+    addBaggage,
+    updateBaggageStatus,
+    searchBaggage,
+    getAllBaggages
+};

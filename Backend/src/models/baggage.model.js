@@ -1,0 +1,34 @@
+import mongoose, { Schema } from 'mongoose';
+
+const baggageSchema = new Schema(
+    {
+        passengerId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        flightId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Plane',
+            required: true
+        },
+        tagNumber: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        weight: {
+            type: Number,
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['checked-in', 'in-transit', 'delivered'],
+            default: 'checked-in',
+            required: true
+        },
+    },
+    { timestamps: true }
+)
+
+export const Baggage = mongoose.model('Baggage', baggageSchema);
