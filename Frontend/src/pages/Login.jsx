@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { FlightTakeoff } from "@mui/icons-material"
 import { Link } from "react-router-dom"
+import Cookie from 'js-cookie';
 
 const Login = ({ setUser }) => {
   const navigate = useNavigate();

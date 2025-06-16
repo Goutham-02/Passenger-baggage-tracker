@@ -82,6 +82,7 @@ const loginUser = async (req, res) => {
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", refreshToken, options)
             .cookie("role", role)
+            .cookie("userId", user._id)
             .json({
                 status: 200,
                 success: true,
@@ -149,9 +150,9 @@ const addPlane = async (req, res) => {
 
 const addBaggage = async (req, res) => {
     try {
-        const { passengerId, flightId, weight, status } = req.body;
+        const { passengerId, flightId, weight, status, location } = req.body;
 
-        if ([passengerId, flightId, status].some((field) => !field || field.trim() === "") || !weight) {
+        if ([passengerId, flightId, status, location].some((field) => !field || field.trim() === "") || !weight) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
 
@@ -176,14 +177,14 @@ const addBaggage = async (req, res) => {
         const flightCode = (flight.name || "").substring(0, 3).toUpperCase();
         const userCode = (passenger.name || "").substring(0, 3).toUpperCase();
 
-        let tagNumber;
+        let baggageID;
         let isUnique = false;
 
         while (!isUnique) {
             const randomDigits = Math.floor(1000 + Math.random() * 9000);
-            tagNumber = `${flightCode}${userCode}${randomDigits}`;
+            baggageID = `${flightCode}${userCode}${randomDigits}`;
 
-            const existingTag = await Baggage.findOne({ tagNumber });
+            const existingTag = await Baggage.findOne({ baggageID });
             if (!existingTag) isUnique = true;
         }
 
@@ -192,7 +193,7 @@ const addBaggage = async (req, res) => {
             flightId,
             weight,
             status,
-            tagNumber
+            baggageID
         });
 
         return res.status(201).json({
@@ -212,19 +213,16 @@ const addBaggage = async (req, res) => {
 
 const updateBaggageStatus = async (req, res) => {
     try {
-        const { baggageId, status } = req.body;
+        const { id, status } = req.body;
 
-        if (!baggageId || !status) {
+        if (!id || !status) {
             return res.status(400).json({ success: false, message: "Baggage ID and status are required" });
         }
 
-        const baggage = await Baggage.findById(baggageId);
+        const baggage = await Baggage.findByIdAndUpdate(id, { status }, { new: true });
         if (!baggage) {
             return res.status(404).json({ success: false, message: "Baggage not found" });
         }
-
-        baggage.status = status;
-        await baggage.save();
 
         return res.status(200).json({
             success: true,
@@ -243,14 +241,14 @@ const updateBaggageStatus = async (req, res) => {
 
 const searchBaggage = async (req, res) => {
     try {
-        const { tagNumber } = req.body;
+        const { tagNumber } = req.params;
         if (!tagNumber) {
             return res.status(400).json({ success: false, message: "Tag number is required" });
         }
 
         const baggage = await Baggage.findOne({ tagNumber })
             .populate('passengerId', 'name')
-            .populate('flightId', 'name from to departureTime arrivalTime');
+            .populate('flightId', 'name from to');
 
         if (!baggage) {
             return res.status(404).json({ success: false, message: "Baggage not found" });
@@ -270,7 +268,7 @@ const searchBaggage = async (req, res) => {
     }
 };
 
-const getAllBaggages = async (req, res) => {
+const getAllBaggagesOfPassenger = async (req, res) => {
     try {
         const { passengerId } = req.params;
         if (!passengerId) {
@@ -292,7 +290,28 @@ const getAllBaggages = async (req, res) => {
             message: error.message || "Internal server error"
         });
     }
-}
+};
+
+const getAllBaggages = async (req, res) => {
+    try {
+        const baggages = await Baggage.find({})
+            .populate('passengerId', 'name')
+            .populate('flightId', 'name from to departureTime arrivalTime');
+
+        return res.status(200).json({
+            success: true,
+            baggages
+        });
+
+    } catch (error) {
+        console.error("Error fetching all baggages:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
+};
+
 
 export {
     registerUser,
@@ -303,5 +322,6 @@ export {
     addBaggage,
     updateBaggageStatus,
     searchBaggage,
-    getAllBaggages
+    getAllBaggages,
+    getAllBaggagesOfPassenger
 };

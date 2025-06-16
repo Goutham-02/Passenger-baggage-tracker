@@ -7,6 +7,7 @@ import {
     addBaggage,
     updateBaggageStatus,
     searchBaggage,
+    getAllBaggagesOfPassenger,
     getAllBaggages
 } from '../controllers/user.controller.js';
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -19,8 +20,8 @@ router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/add-plane").post(addPlane);
 router.route("/add-baggage").post(addBaggage);
 router.route("/update-baggage-status").post(updateBaggageStatus);
-router.route("/search-baggage").post(searchBaggage);
-router.route("/all-baggages/:passengerId").get(getAllBaggages);
-
+router.route("/search-baggage/:tagNumber").get(searchBaggage);
+router.route("/all-baggages/:passengerId").get(getAllBaggagesOfPassenger);
+router.route("/all-baggages").get(getAllBaggages);
 
 export default router;

@@ -71,7 +71,7 @@ const Navbar = ({ user, onLogout }) => {
       <List>
         {menuItems.map((item) => (
           <ListItem
-            button
+            component="button"
             key={item.text}
             onClick={() => {
               navigate(item.path)
@@ -82,7 +82,7 @@ const Navbar = ({ user, onLogout }) => {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-        <ListItem button onClick={onLogout}>
+        <ListItem component="button" onClick={onLogout}>
           <ListItemIcon>
             <Logout />
           </ListItemIcon>

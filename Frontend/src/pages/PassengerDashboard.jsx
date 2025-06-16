@@ -18,49 +18,48 @@ import {
   ListItemIcon,
   ListItemText,
 } from "@mui/material"
-import { Luggage, FlightTakeoff, LocationOn, CheckCircle, Schedule, Search } from "@mui/icons-material"
+import { Luggage, FlightTakeoff, LocationOn, CheckCircle, Schedule, Search, Scale } from "@mui/icons-material"
+import { useEffect } from "react";
+import Cookie from 'js-cookie';
 
 const PassengerDashboard = ({ user }) => {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResult, setSearchResult] = useState(null)
+  const [myBaggage, setMyBaggage] = useState('');
 
-  // Mock baggage data
-  const myBaggage = [
-    {
-      id: "BG001234",
-      flight: "AA123",
-      from: "JFK",
-      to: "LAX",
-      status: "In Transit",
-      progress: 60,
-      lastUpdate: "2 hours ago",
-      location: "Denver Hub",
-    },
-    {
-      id: "BG001235",
-      flight: "AA456",
-      from: "LAX",
-      to: "ORD",
-      status: "Delivered",
-      progress: 100,
-      lastUpdate: "1 day ago",
-      location: "Baggage Claim 3",
-    },
-  ]
+  const accessToken = Cookie.get("accessToken");
+  const [id, setId] = useState('');
+
+  useEffect(() => {
+    if (accessToken) {
+      const tokenData = JSON.parse(atob(accessToken.split('.')[1]));
+      setId(tokenData._id);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    fetch(`http://localhost:8000/api/v1/users/all-baggages/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(response => response.json())
+      .then(data => setMyBaggage(data.baggages))
+      .catch(error => console.error('Error:', error));
+  }, [user.id]);
 
   const handleSearch = () => {
     if (searchQuery) {
-      // Mock search result
-      setSearchResult({
-        id: searchQuery,
-        flight: "DL789",
-        from: "ATL",
-        to: "MIA",
-        status: "Checked In",
-        progress: 25,
-        lastUpdate: "30 minutes ago",
-        location: "Atlanta Airport",
+      fetch(`http://localhost:8000/api/v1/users/search-baggage/${searchQuery}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
+        .then(response => response.json())
+        .then(data => setSearchResult(data))
+        .catch(error => console.error('Error:', error));
     }
   }
 
@@ -134,10 +133,10 @@ const PassengerDashboard = ({ user }) => {
           {searchResult && (
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="subtitle2">
-                Baggage {searchResult.id} - {searchResult.status}
+                Baggage {searchResult.baggage.tagNumber} - {searchResult.baggage.status}
               </Typography>
               <Typography variant="body2">
-                Flight {searchResult.flight}: {searchResult.from} → {searchResult.to}
+                Flight {searchResult.baggage.flightId.name}: {searchResult.baggage.flightId.from} → {searchResult.baggage.flightId.to}
               </Typography>
             </Alert>
           )}
@@ -146,21 +145,21 @@ const PassengerDashboard = ({ user }) => {
 
       {/* My Baggage */}
       <Typography variant="h5" gutterBottom>
-        My Baggage
+        My Baggages
       </Typography>
 
-      <Grid container spacing={3}>
-        {myBaggage.map((bag) => (
+      <Grid container spacing={3} marginTop={2}>
+        {Array.isArray(myBaggage) && myBaggage.map((bag) => (
           <Grid item xs={12} md={6} key={bag.id}>
             <Card>
               <CardContent>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
                   <Box>
                     <Typography variant="h6" gutterBottom>
-                      {bag.id}
+                      {bag.tagNumber}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Flight {bag.flight}
+                      Flight {bag.flightId.name}
                     </Typography>
                   </Box>
                   <Chip
@@ -176,7 +175,7 @@ const PassengerDashboard = ({ user }) => {
                     <ListItemIcon>
                       <FlightTakeoff fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText primary="Route" secondary={`${bag.from} → ${bag.to}`} />
+                    <ListItemText primary="Route" secondary={`${bag.flightId.from} → ${bag.flightId.to}`} />
                   </ListItem>
                   <ListItem disablePadding>
                     <ListItemIcon>
@@ -188,67 +187,20 @@ const PassengerDashboard = ({ user }) => {
                     <ListItemIcon>
                       <Schedule fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText primary="Last Update" secondary={bag.lastUpdate} />
+                    <ListItemText primary="Last Update" secondary={bag.updatedAt} />
+                  </ListItem>
+                  <ListItem disablePadding>
+                    <ListItemIcon>
+                      <Scale fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Weight" secondary={`${bag.weight} Kgs`} />
                   </ListItem>
                 </List>
-
-                <Box sx={{ mt: 2 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                    <Typography variant="body2">Progress</Typography>
-                    <Typography variant="body2">{bag.progress}%</Typography>
-                  </Box>
-                  <LinearProgress variant="determinate" value={bag.progress} sx={{ height: 8, borderRadius: 4 }} />
-                </Box>
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
-
-      {/* Travel Stats */}
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Travel Statistics
-        </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={4}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography variant="h3" color="primary">
-                  12
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total Flights
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography variant="h3" color="primary">
-                  24
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Bags Tracked
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography variant="h3" color="success.main">
-                  98%
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  On-Time Delivery
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
     </Container>
   )
 }

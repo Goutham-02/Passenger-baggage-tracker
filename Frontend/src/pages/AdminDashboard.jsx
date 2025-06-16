@@ -1,6 +1,4 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Container,
   Grid,
@@ -10,7 +8,6 @@ import {
   Box,
   Chip,
   Button,
-  TextField,
   Select,
   MenuItem,
   FormControl,
@@ -27,125 +24,113 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from "@mui/material"
-import {
-  Edit,
-  Visibility,
-  Warning,
-  CheckCircle,
-  Schedule,
-  TrendingUp,
-  Luggage,
-  FlightTakeoff,
-} from "@mui/icons-material"
+} from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import Visibility from '@mui/icons-material/Visibility';
+import Edit from '@mui/icons-material/Edit';
+import PersonIcon from '@mui/icons-material/Person';
+import FlightIcon from '@mui/icons-material/Flight';
+import RouteIcon from '@mui/icons-material/Route';
+import CircleIcon from '@mui/icons-material/Circle';
 
-const AdminDashboard = ({ user }) => {
+const AdminDashboard = () => {
   const [selectedBag, setSelectedBag] = useState(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState("all")
+  const [allBaggage, setAllBaggage] = useState([])
+  const [updatedStatus, setUpdatedStatus] = useState(selectedBag?.status.toLowerCase() || '');
 
-  // Mock baggage data for admin view
-  const allBaggage = [
-    {
-      id: "BG001234",
-      passenger: "John Doe",
-      flight: "AA123",
-      from: "JFK",
-      to: "LAX",
-      status: "In Transit",
-      lastUpdate: "2 hours ago",
-      location: "Denver Hub",
-      priority: "Normal",
-    },
-    {
-      id: "BG001235",
-      passenger: "Jane Smith",
-      flight: "AA456",
-      from: "LAX",
-      to: "ORD",
-      status: "Delivered",
-      lastUpdate: "1 day ago",
-      location: "Baggage Claim 3",
-      priority: "Normal",
-    },
-    {
-      id: "BG001236",
-      passenger: "Bob Johnson",
-      flight: "DL789",
-      from: "ATL",
-      to: "MIA",
-      status: "Delayed",
-      lastUpdate: "4 hours ago",
-      location: "Atlanta Airport",
-      priority: "High",
-    },
-    {
-      id: "BG001237",
-      passenger: "Alice Brown",
-      flight: "UA321",
-      from: "SFO",
-      to: "SEA",
-      status: "Lost",
-      lastUpdate: "1 day ago",
-      location: "Unknown",
-      priority: "Critical",
-    },
-  ]
 
-  const stats = {
-    total: 1247,
-    inTransit: 89,
-    delivered: 1134,
-    delayed: 18,
-    lost: 6,
-  }
+  useEffect(() => {
+    const fetchBaggage = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/users/all-baggages')
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const contentType = response.headers.get("content-type")
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new TypeError("Response is not JSON")
+        }
+        const data = await response.json()
+        console.log('Fetched baggage data:', data)
+        setAllBaggage(data.baggages)
+      } catch (error) {
+        console.error('Error fetching baggage:', error)
+        setAllBaggage([])
+      }
+    }
+    fetchBaggage()
+  }, [])
+
+  useEffect(() => {
+    if (selectedBag) {
+      setUpdatedStatus(selectedBag.status.toLowerCase());
+    }
+  }, [selectedBag]);
 
   const handleViewDetails = (bag) => {
     setSelectedBag(bag)
     setDialogOpen(true)
-  }
+  };
 
-  const handleUpdateStatus = (bagId, newStatus) => {
-    // Mock update functionality
-    console.log(`Updating bag ${bagId} to status: ${newStatus}`)
+  const handleUpdateStatus = async (bagId, status) => {
+    console.log(`Updating bag ${bagId} to status: ${status}`)
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/users/update-baggage-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: bagId,
+          status
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Status updated successfully:', data);
+
+      setAllBaggage(prevBaggage =>
+        prevBaggage.map(bag =>
+          bag._id === bagId ? { ...bag, status: status } : bag
+        )
+      );
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+
     setDialogOpen(false)
-  }
+  };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "Delivered":
-        return "success"
-      case "In Transit":
-        return "primary"
-      case "Checked In":
-        return "info"
-      case "Delayed":
-        return "warning"
-      case "Lost":
-        return "error"
+    switch (status.toLowerCase()) {
+      case "delivered":
+        return "success";
+      case "in-transit":
+        return "primary";
+      case "checked-in":
+        return "info";
+      case "delayed":
+        return "warning";
+      case "lost":
+        return "error";
       default:
-        return "default"
+        return "default";
     }
-  }
+  };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "Critical":
-        return "error"
-      case "High":
-        return "warning"
-      case "Normal":
-        return "success"
-      default:
-        return "default"
-    }
-  }
-
-  const filteredBaggage =
-    statusFilter === "all" ? allBaggage : allBaggage.filter((bag) => bag.status.toLowerCase() === statusFilter)
+  const formatStatusLabel = (status) =>
+    status
+      .replace("-", " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
 
   return (
-    <Container maxWidth="xl">
+    <Container maxWidth="xl" sx={{ my: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom>
           Admin Dashboard
@@ -154,75 +139,6 @@ const AdminDashboard = ({ user }) => {
           Monitor and manage all baggage tracking operations
         </Typography>
       </Box>
-
-      {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card>
-            <CardContent sx={{ textAlign: "center" }}>
-              <Luggage sx={{ fontSize: 40, color: "primary.main", mb: 1 }} />
-              <Typography variant="h4" color="primary">
-                {stats.total}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Baggage
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card>
-            <CardContent sx={{ textAlign: "center" }}>
-              <FlightTakeoff sx={{ fontSize: 40, color: "info.main", mb: 1 }} />
-              <Typography variant="h4" color="info.main">
-                {stats.inTransit}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                In Transit
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card>
-            <CardContent sx={{ textAlign: "center" }}>
-              <CheckCircle sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
-              <Typography variant="h4" color="success.main">
-                {stats.delivered}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Delivered
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card>
-            <CardContent sx={{ textAlign: "center" }}>
-              <Schedule sx={{ fontSize: 40, color: "warning.main", mb: 1 }} />
-              <Typography variant="h4" color="warning.main">
-                {stats.delayed}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Delayed
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card>
-            <CardContent sx={{ textAlign: "center" }}>
-              <Warning sx={{ fontSize: 40, color: "error.main", mb: 1 }} />
-              <Typography variant="h4" color="error.main">
-                {stats.lost}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Lost
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
 
       {/* Filters and Controls */}
       <Card sx={{ mb: 3 }}>
@@ -238,10 +154,6 @@ const AdminDashboard = ({ user }) => {
                 <MenuItem value="lost">Lost</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Search Baggage ID" variant="outlined" sx={{ minWidth: 200 }} />
-            <Button variant="contained" startIcon={<TrendingUp />}>
-              Generate Report
-            </Button>
           </Box>
         </CardContent>
       </Card>
@@ -261,35 +173,43 @@ const AdminDashboard = ({ user }) => {
                   <TableCell>Flight</TableCell>
                   <TableCell>Route</TableCell>
                   <TableCell>Status</TableCell>
-                  <TableCell>Priority</TableCell>
                   <TableCell>Location</TableCell>
                   <TableCell>Last Update</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredBaggage.map((bag) => (
-                  <TableRow key={bag.id} hover>
+                {allBaggage.filter(bag =>
+                  statusFilter === "all" ||
+                  bag.status.toLowerCase() === statusFilter
+                ).map((bag) => (
+                  <TableRow key={bag._id} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
-                        {bag.id}
+                        {bag.tagNumber || "N/A"}
                       </Typography>
                     </TableCell>
-                    <TableCell>{bag.passenger}</TableCell>
-                    <TableCell>{bag.flight}</TableCell>
+                    <TableCell>{bag.passengerId?.name || "N/A"}</TableCell>
+                    <TableCell>{bag.flightId?.name || "N/A"}</TableCell>
                     <TableCell>
-                      {bag.from} → {bag.to}
+                      {bag.flightId?.from || "N/A"} → {bag.flightId?.to || "N/A"}
                     </TableCell>
                     <TableCell>
-                      <Chip label={bag.status} color={getStatusColor(bag.status)} size="small" variant="outlined" />
+                      <Chip
+                        label={formatStatusLabel(bag.status)}
+                        color={getStatusColor(bag.status)}
+                        size="small"
+                        variant="outlined"
+                      />
                     </TableCell>
+                    <TableCell>{bag.location || "Unknown"}</TableCell>
+                    <TableCell>{new Date(bag.updatedAt).toLocaleString()}</TableCell>
                     <TableCell>
-                      <Chip label={bag.priority} color={getPriorityColor(bag.priority)} size="small" />
-                    </TableCell>
-                    <TableCell>{bag.location}</TableCell>
-                    <TableCell>{bag.lastUpdate}</TableCell>
-                    <TableCell>
-                      <IconButton size="small" onClick={() => handleViewDetails(bag)} color="primary">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleViewDetails(bag)}
+                        color="primary"
+                      >
                         <Visibility />
                       </IconButton>
                       <IconButton size="small" color="secondary">
@@ -305,53 +225,193 @@ const AdminDashboard = ({ user }) => {
       </Card>
 
       {/* Baggage Details Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Baggage Details - {selectedBag?.id}</DialogTitle>
-        <DialogContent>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          backgroundColor: 'primary.main',
+          color: 'white',
+          py: 2,
+          px: 3,
+          fontWeight: 'bold',
+          fontSize: '1.2rem'
+        }}>
+          Baggage Details - {selectedBag?.tagNumber}
+          <IconButton
+            onClick={() => setDialogOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              color: 'white'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3 }}>
           {selectedBag && (
-            <Box sx={{ pt: 2 }}>
-              <Grid container spacing={2}>
+            <Box sx={{ pt: 1 }}>
+              <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Passenger</Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {selectedBag.passenger}
-                  </Typography>
+                  <Box sx={{
+                    backgroundColor: 'grey.50',
+                    p: 2,
+                    borderRadius: 2,
+                    height: '100%'
+                  }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Passenger Information
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <PersonIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        {selectedBag.passengerId.name}
+                      </Typography>
+                    </Box>
+
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Flight Details
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <FlightIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        {selectedBag.flightId.name}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <RouteIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        {selectedBag.flightId.from} → {selectedBag.flightId.to}
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Grid>
+
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Flight</Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {selectedBag.flight}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Route</Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {selectedBag.from} → {selectedBag.to}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2">Current Status</Typography>
-                  <Chip label={selectedBag.status} color={getStatusColor(selectedBag.status)} sx={{ mt: 0.5 }} />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Update Status</Typography>
-                  <FormControl fullWidth sx={{ mt: 1 }}>
-                    <Select defaultValue={selectedBag.status.toLowerCase()}>
-                      <MenuItem value="checked in">Checked In</MenuItem>
-                      <MenuItem value="in transit">In Transit</MenuItem>
-                      <MenuItem value="delivered">Delivered</MenuItem>
-                      <MenuItem value="delayed">Delayed</MenuItem>
-                      <MenuItem value="lost">Lost</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <Box sx={{
+                    backgroundColor: 'grey.50',
+                    p: 2,
+                    borderRadius: 2,
+                    height: '100%'
+                  }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Current Status
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                      <Chip
+                        label={selectedBag.status}
+                        color={getStatusColor(selectedBag.status)}
+                        sx={{
+                          fontWeight: 'bold',
+                          fontSize: '0.875rem',
+                          px: 1,
+                          py: 1.5
+                        }}
+                        icon={
+                          <CircleIcon sx={{
+                            fontSize: '0.75rem',
+                            color: 'inherit'
+                          }} />
+                        }
+                      />
+                    </Box>
+
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Update Status
+                    </Typography>
+                    <FormControl fullWidth>
+                      <Select
+                        value={updatedStatus}
+                        onChange={(e) => setUpdatedStatus(e.target.value)}
+                        sx={{
+                          backgroundColor: 'white',
+                          borderRadius: 2,
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'grey.300'
+                          }
+                        }}
+                      >
+                        <MenuItem value="checked in">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CircleIcon sx={{ color: 'success.main', fontSize: '0.75rem', mr: 1 }} />
+                            Checked In
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="in transit">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CircleIcon sx={{ color: 'info.main', fontSize: '0.75rem', mr: 1 }} />
+                            In Transit
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="delivered">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CircleIcon sx={{ color: 'primary.main', fontSize: '0.75rem', mr: 1 }} />
+                            Delivered
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="delayed">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CircleIcon sx={{ color: 'warning.main', fontSize: '0.75rem', mr: 1 }} />
+                            Delayed
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="lost">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CircleIcon sx={{ color: 'error.main', fontSize: '0.75rem', mr: 1 }} />
+                            Lost
+                          </Box>
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
                 </Grid>
               </Grid>
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => handleUpdateStatus(selectedBag?.id, "updated")}>
+
+        <DialogActions sx={{
+          px: 3,
+          py: 2,
+          borderTop: '1px solid',
+          borderColor: 'divider'
+        }}>
+          <Button
+            onClick={() => setDialogOpen(false)}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'grey.300'
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => handleUpdateStatus(selectedBag?._id, updatedStatus)}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              boxShadow: 'none',
+              textTransform: 'none',
+              fontWeight: 'medium'
+            }}
+          >
             Update Status
           </Button>
         </DialogActions>

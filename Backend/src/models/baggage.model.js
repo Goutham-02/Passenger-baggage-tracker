@@ -12,7 +12,7 @@ const baggageSchema = new Schema(
             ref: 'Plane',
             required: true
         },
-        tagNumber: {
+        baggageID: {
             type: String,
             required: true,
             unique: true
@@ -23,10 +23,14 @@ const baggageSchema = new Schema(
         },
         status: {
             type: String,
-            enum: ['checked-in', 'in-transit', 'delivered'],
+            enum: ['checked-in', 'in-transit', 'delivered', 'delayed', 'lost'],
             default: 'checked-in',
             required: true
         },
+        location: {
+            type: String,
+            required: true
+        }
     },
     { timestamps: true }
 )
