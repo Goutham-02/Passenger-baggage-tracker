@@ -29,7 +29,6 @@ const baggageSchema = new Schema(
         },
         location: {
             type: String,
-            required: true
         }
     },
     { timestamps: true }

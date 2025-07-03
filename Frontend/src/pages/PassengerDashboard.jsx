@@ -47,7 +47,7 @@ const PassengerDashboard = ({ user }) => {
       .then(response => response.json())
       .then(data => setMyBaggage(data.baggages))
       .catch(error => console.error('Error:', error));
-  }, [user.id]);
+  }, [id]);
 
   const handleSearch = () => {
     if (searchQuery) {

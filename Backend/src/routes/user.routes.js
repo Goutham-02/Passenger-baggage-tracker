@@ -8,7 +8,9 @@ import {
     updateBaggageStatus,
     searchBaggage,
     getAllBaggagesOfPassenger,
-    getAllBaggages
+    getAllBaggages,
+    getAllFlights,
+    getAllUsers
 } from '../controllers/user.controller.js';
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -23,5 +25,7 @@ router.route("/update-baggage-status").post(updateBaggageStatus);
 router.route("/search-baggage/:tagNumber").get(searchBaggage);
 router.route("/all-baggages/:passengerId").get(getAllBaggagesOfPassenger);
 router.route("/all-baggages").get(getAllBaggages);
+router.route("/all-flights").get(getAllFlights);
+router.route("/all-users").get(getAllUsers);
 
 export default router;

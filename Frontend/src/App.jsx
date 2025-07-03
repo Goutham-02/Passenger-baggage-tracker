@@ -53,7 +53,6 @@ function App() {
 
   const navbarHeight = 64;
 
-  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <Box

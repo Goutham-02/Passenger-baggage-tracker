@@ -54,11 +54,13 @@ const Navbar = ({ user, onLogout }) => {
       icon: user.role === "admin" ? <AdminPanelSettings /> : <Dashboard />,
       path: user.role === "admin" ? "/admin" : "/dashboard",
     },
-    {
-      text: "Track Baggage",
-      icon: <TrackChanges />,
-      path: "/track",
-    },
+    ...(user.role === "admin" ? [
+      {
+        text: "Admin Panel",
+        icon: <TrackChanges />,
+        path: "/track",
+      }
+    ] : [])
   ]
 
   const drawer = (

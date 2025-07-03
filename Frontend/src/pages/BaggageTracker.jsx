@@ -1,266 +1,272 @@
-"use client"
-
-import { useState } from "react"
+import { useState } from "react";
 import {
-  Container,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  TextField,
-  Button,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Chip,
-  Alert,
-  Grid,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material"
-import { Search, Luggage, FlightTakeoff, LocationOn, Schedule, CheckCircle, LocalShipping } from "@mui/icons-material"
+    Container,
+    Paper,
+    TextField,
+    Button,
+    Typography,
+    Box,
+    Alert,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    CircularProgress
+} from "@mui/material";
+import { Flight, Work } from "@mui/icons-material";
 
-const BaggageTracker = () => {
-  const [trackingNumber, setTrackingNumber] = useState("")
-  const [trackingResult, setTrackingResult] = useState(null)
-  const [loading, setLoading] = useState(false)
+const AdminPanel = () => {
+    const [flight, setFlight] = useState({
+        name: "",
+        from: "",
+        to: "",
+        departureTime: "",
+        arrivalTime: "",
+    });
 
-  const handleTrack = async () => {
-    if (!trackingNumber.trim()) return
+    const [baggage, setBaggage] = useState({
+        passengerId: "",
+        flightId: "",
+        weight: "",
+        status: "",
+    });
 
-    setLoading(true)
+    const [flights, setFlights] = useState([]);
+    const [passengers, setPassengers] = useState([]);
+    const [loadingFlights, setLoadingFlights] = useState(false);
+    const [loadingPassengers, setLoadingPassengers] = useState(false);
 
-    // Simulate API call
-    setTimeout(() => {
-      const mockResult = {
-        id: trackingNumber,
-        flight: "AA123",
-        from: "JFK - John F. Kennedy International",
-        to: "LAX - Los Angeles International",
-        passenger: "John Doe",
-        status: "In Transit",
-        currentLocation: "Denver International Airport",
-        estimatedDelivery: "2024-01-15 14:30",
-        weight: "23 kg",
-        timeline: [
-          {
-            label: "Checked In",
-            description: "Baggage checked in at JFK Airport",
-            time: "2024-01-14 08:00",
-            completed: true,
-            location: "JFK Terminal 4",
-          },
-          {
-            label: "Security Screening",
-            description: "Baggage cleared security screening",
-            time: "2024-01-14 08:30",
-            completed: true,
-            location: "JFK Security",
-          },
-          {
-            label: "Loaded on Aircraft",
-            description: "Baggage loaded on Flight AA123",
-            time: "2024-01-14 10:15",
-            completed: true,
-            location: "JFK Gate A12",
-          },
-          {
-            label: "In Transit",
-            description: "Currently at connecting hub",
-            time: "2024-01-14 16:45",
-            completed: true,
-            location: "Denver International Airport",
-          },
-          {
-            label: "Loading Next Flight",
-            description: "Being loaded on connecting flight",
-            time: "Expected: 2024-01-15 12:00",
-            completed: false,
-            location: "Denver Gate B15",
-          },
-          {
-            label: "Arrival at Destination",
-            description: "Arrival at LAX Airport",
-            time: "Expected: 2024-01-15 14:30",
-            completed: false,
-            location: "LAX Terminal 1",
-          },
-        ],
-      }
-      setTrackingResult(mockResult)
-      setLoading(false)
-    }, 1500)
-  }
+    const handleFlightsOpen = async () => {
+        if (flights.length === 0) {
+            setLoadingFlights(true);
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/users/all-flights");
+                const data = await res.json();
+                setFlights(data.flights || []);
+            } catch (err) {
+                console.error(err);
+                setError("Failed to fetch flights.");
+            } finally {
+                setLoadingFlights(false);
+            }
+        }
+    };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Delivered":
-        return "success"
-      case "In Transit":
-        return "primary"
-      case "Checked In":
-        return "info"
-      case "Delayed":
-        return "warning"
-      case "Lost":
-        return "error"
-      default:
-        return "default"
-    }
-  }
+    // Fetch passengers when dropdown opens
+    const handlePassengersOpen = async () => {
+        if (passengers.length === 0) {
+            setLoadingPassengers(true);
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/users/all-users");
+                const data = await res.json();
+                setPassengers(data.users || []);
+            } catch (err) {
+                setError(`Failed to fetch passengers: ${err.message}`);
+            } finally {
+                setLoadingPassengers(false);
+            }
+        }
+    };
 
-  return (
-    <Container maxWidth="md">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom align="center">
-          Track Your Baggage
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" align="center">
-          Enter your baggage tag number to track your luggage in real-time
-        </Typography>
-      </Box>
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
-      {/* Search Section */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <TextField
-              fullWidth
-              label="Baggage Tag Number"
-              placeholder="e.g., BG001234"
-              value={trackingNumber}
-              onChange={(e) => setTrackingNumber(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleTrack()}
-            />
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<Search />}
-              onClick={handleTrack}
-              disabled={loading}
-              sx={{ minWidth: 120 }}
-            >
-              {loading ? "Tracking..." : "Track"}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+    const handleFlightChange = (e) => {
+        setFlight({ ...flight, [e.target.name]: e.target.value });
+        setError("");
+        setSuccess("");
+    };
 
-      {/* Tracking Results */}
-      {trackingResult && (
-        <>
-          {/* Baggage Info */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    Baggage {trackingResult.id}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Passenger: {trackingResult.passenger}
-                  </Typography>
+    const handleBaggageChange = (e) => {
+        setBaggage({ ...baggage, [e.target.name]: e.target.value });
+        setError("");
+        setSuccess("");
+    };
+
+    const addFlight = async (e) => {
+        e.preventDefault();
+
+        try {
+            const res = await fetch("http://localhost:8000/api/v1/users/add-plane", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(flight),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.message || "Failed to add flight");
+
+            setSuccess("Flight added successfully!");
+            setFlight({ name: "", from: "", to: "", departureTime: "", arrivalTime: "" });
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const addBaggage = async (e) => {
+        e.preventDefault();
+
+        // Validate required fields
+        if (!baggage.passengerId || !baggage.flightId || !baggage.weight || !baggage.status) {
+            setError("All fields are required");
+            return;
+        }
+
+        try {
+            const baggageData = {
+                ...baggage,
+                weight: Number(baggage.weight),
+                location: "Check-in Counter"
+            };
+
+            const res = await fetch("http://localhost:8000/api/v1/users/add-baggage", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(baggageData),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.message || "Failed to add baggage");
+
+            setSuccess(`Baggage added successfully! Baggage ID: ${data.baggage.baggageID}`);
+            setBaggage({ passengerId: "", flightId: "", weight: "", status: "" });
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    return (
+        <Container maxWidth="md" sx={{ mt: 6 }}>
+            <Paper elevation={3} sx={{ p: 4 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <Work sx={{ fontSize: 40, color: "primary.main", mr: 1 }} />
+                    <Typography variant="h4" color="primary">Admin Panel</Typography>
                 </Box>
-                <Chip label={trackingResult.status} color={getStatusColor(trackingResult.status)} icon={<Luggage />} />
-              </Box>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <List dense>
-                    <ListItem disablePadding>
-                      <ListItemIcon>
-                        <FlightTakeoff fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary="Flight" secondary={trackingResult.flight} />
-                    </ListItem>
-                    <ListItem disablePadding>
-                      <ListItemIcon>
-                        <LocationOn fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary="Route" secondary={`${trackingResult.from} → ${trackingResult.to}`} />
-                    </ListItem>
-                  </List>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <List dense>
-                    <ListItem disablePadding>
-                      <ListItemIcon>
-                        <LocalShipping fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary="Current Location" secondary={trackingResult.currentLocation} />
-                    </ListItem>
-                    <ListItem disablePadding>
-                      <ListItemIcon>
-                        <Schedule fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary="Est. Delivery" secondary={trackingResult.estimatedDelivery} />
-                    </ListItem>
-                  </List>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
-          {/* Timeline */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Tracking Timeline
-              </Typography>
-              <Stepper orientation="vertical">
-                {trackingResult.timeline.map((step, index) => (
-                  <Step key={index} active={true} completed={step.completed}>
-                    <StepLabel
-                      StepIconComponent={() =>
-                        step.completed ? <CheckCircle color="success" /> : <Schedule color="action" />
-                      }
-                    >
-                      <Typography variant="subtitle2">{step.label}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {step.time}
-                      </Typography>
-                    </StepLabel>
-                    <StepContent>
-                      <Typography variant="body2" color="text.secondary">
-                        {step.description}
-                      </Typography>
-                      <Typography variant="caption" color="primary">
-                        📍 {step.location}
-                      </Typography>
-                    </StepContent>
-                  </Step>
-                ))}
-              </Stepper>
-            </CardContent>
-          </Card>
-        </>
-      )}
+                <Typography variant="h6" gutterBottom>Add Flight</Typography>
+                <Box component="form" onSubmit={addFlight} sx={{ mb: 4 }}>
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="Plane Name"
+                        name="name"
+                        value={flight.name}
+                        onChange={handleFlightChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="From"
+                        name="from"
+                        value={flight.from}
+                        onChange={handleFlightChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="To"
+                        name="to"
+                        value={flight.to}
+                        onChange={handleFlightChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="Departure Time (ISO format)"
+                        name="departureTime"
+                        value={flight.departureTime}
+                        onChange={handleFlightChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="Arrival Time (ISO format)"
+                        name="arrivalTime"
+                        value={flight.arrivalTime}
+                        onChange={handleFlightChange}
+                    />
+                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>Add Flight</Button>
+                </Box>
 
-      {/* Help Section */}
-      {!trackingResult && (
-        <Card sx={{ mt: 4 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Need Help?
-            </Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Your baggage tag number can be found on your boarding pass or baggage receipt.
-            </Alert>
-            <Typography variant="body2" color="text.secondary">
-              If you're having trouble finding your baggage or if it shows as lost, please contact our customer service
-              team immediately.
-            </Typography>
-            <Button variant="outlined" sx={{ mt: 2 }}>
-              Contact Support
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </Container>
-  )
-}
+                <Typography variant="h6" gutterBottom>Add Baggage</Typography>
+                <Box component="form" onSubmit={addBaggage}>
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel id="flight-label">Select Flight</InputLabel>
+                        <Select
+                            labelId="flight-label"
+                            id="flightId"
+                            name="flightId"
+                            value={baggage.flightId}
+                            label="Select Flight"
+                            onOpen={handleFlightsOpen}
+                            onChange={handleBaggageChange}
+                        >
+                            {loadingFlights ? (
+                                <MenuItem disabled><CircularProgress size={20} /></MenuItem>
+                            ) : (
+                                flights.map(flight => (
+                                    <MenuItem key={flight._id} value={flight._id}>
+                                        {`${flight.name} (${flight.from} → ${flight.to})`}
+                                    </MenuItem>
+                                ))
+                            )}
+                        </Select>
+                    </FormControl>
 
-export default BaggageTracker
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel id="passenger-label">Select Passenger</InputLabel>
+                        <Select
+                            labelId="passenger-label"
+                            id="passengerId"
+                            name="passengerId"
+                            value={baggage.passengerId}
+                            label="Select Passenger"
+                            onOpen={handlePassengersOpen}
+                            onChange={handleBaggageChange}
+                        >
+                            {loadingPassengers ? (
+                                <MenuItem disabled><CircularProgress size={20} /></MenuItem>
+                            ) : (
+                                passengers.map(user => (
+                                    <MenuItem key={user._id} value={user._id}>
+                                        {user.name} ({user.email})
+                                    </MenuItem>
+                                ))
+                            )}
+                        </Select>
+                    </FormControl>
+
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="Weight (in kg)"
+                        name="weight"
+                        type="number"
+                        value={baggage.weight}
+                        onChange={handleBaggageChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        label="Status (e.g., checked-in)"
+                        name="status"
+                        value={baggage.status}
+                        onChange={handleBaggageChange}
+                    />
+                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>Add Baggage</Button>
+                </Box>
+            </Paper>
+        </Container>
+    );
+};
+
+export default AdminPanel;

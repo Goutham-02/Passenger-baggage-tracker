@@ -150,9 +150,9 @@ const addPlane = async (req, res) => {
 
 const addBaggage = async (req, res) => {
     try {
-        const { passengerId, flightId, weight, status, location } = req.body;
+        const { passengerId, flightId, weight, status } = req.body;
 
-        if ([passengerId, flightId, status, location].some((field) => !field || field.trim() === "") || !weight) {
+        if ([passengerId, flightId, status].some((field) => !field || field.trim() === "") || !weight) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
 
@@ -164,14 +164,6 @@ const addBaggage = async (req, res) => {
         const passenger = await User.findById(passengerId);
         if (!passenger) {
             return res.status(404).json({ success: false, message: "Passenger not found" });
-        }
-
-        const existingBaggage = await Baggage.findOne({ passengerId, flightId });
-        if (existingBaggage) {
-            return res.status(409).json({
-                success: false,
-                message: "Baggage for this passenger and flight already exists"
-            });
         }
 
         const flightCode = (flight.name || "").substring(0, 3).toUpperCase();
@@ -312,6 +304,41 @@ const getAllBaggages = async (req, res) => {
     }
 };
 
+const getAllFlights = async (req, res) => {
+    try {
+        const flights = await Plane.find({})
+
+        return res.status(200).json({
+            success: true,
+            flights
+        });
+
+    } catch (error) {
+        console.error("Error fetching all flights:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
+};
+
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: "passenger" }).select("-password -refreshToken");
+
+        return res.status(200).json({
+            success: true,
+            users
+        });
+
+    } catch (error) {
+        console.error("Error fetching all users:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error"
+        });
+    }
+};
 
 export {
     registerUser,
@@ -323,5 +350,7 @@ export {
     updateBaggageStatus,
     searchBaggage,
     getAllBaggages,
-    getAllBaggagesOfPassenger
+    getAllBaggagesOfPassenger,
+    getAllFlights,
+    getAllUsers
 };
