@@ -75,7 +75,6 @@ const AdminDashboard = () => {
   };
 
   const handleUpdateStatus = async (bagId, status) => {
-    console.log(`Updating bag ${bagId} to status: ${status}`)
     try {
       const response = await fetch('http://localhost:8000/api/v1/users/update-baggage-status', {
         method: 'POST',
